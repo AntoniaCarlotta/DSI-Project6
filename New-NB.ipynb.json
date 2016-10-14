@@ -1,0 +1,2178 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 215,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import subprocess\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.ensemble import RandomForestRegressor\n",
+    "import scipy\n",
+    "import requests\n",
+    "from imdbpie import Imdb\n",
+    "import nltk\n",
+    "import matplotlib.pyplot as plt\n",
+    "import urllib\n",
+    "from bs4 import BeautifulSoup\n",
+    "import nltk\n",
+    "import collections\n",
+    "import re\n",
+    "import csv\n",
+    "import psycopg2\n",
+    "\n",
+    "%matplotlib inline"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 216,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from imdbpie import Imdb\n",
+    "imdb = Imdb()\n",
+    "imdb = Imdb(anonymize=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 217,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "class Imdb_sup(Imdb):\n",
+    "    def bottom(self):\n",
+    "        url = self._build_url('/chart/bottom', {})\n",
+    "        response = self._get(url)\n",
+    "        return response['data']['list']['list']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 218,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "top=imdb.top_250()\n",
+    "top = pd.DataFrame(top[:5])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 219,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "imdb2 = Imdb_sup(anonymize=True)\n",
+    "bottom = imdb2.bottom()\n",
+    "bottom = pd.DataFrame(bottom[:5])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 220,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(10, 8)"
+      ]
+     },
+     "execution_count": 220,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "frames = [top, bottom]\n",
+    "df = pd.concat(frames)\n",
+    "df.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 221,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>can_rate</th>\n",
+       "      <th>image</th>\n",
+       "      <th>num_votes</th>\n",
+       "      <th>rating</th>\n",
+       "      <th>tconst</th>\n",
+       "      <th>title</th>\n",
+       "      <th>type</th>\n",
+       "      <th>year</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>1715396</td>\n",
+       "      <td>9.3</td>\n",
+       "      <td>tt0111161</td>\n",
+       "      <td>The Shawshank Redemption</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1994</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>1172475</td>\n",
+       "      <td>9.2</td>\n",
+       "      <td>tt0068646</td>\n",
+       "      <td>The Godfather</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1972</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>803348</td>\n",
+       "      <td>9.0</td>\n",
+       "      <td>tt0071562</td>\n",
+       "      <td>The Godfather: Part II</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1974</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>1701815</td>\n",
+       "      <td>9.0</td>\n",
+       "      <td>tt0468569</td>\n",
+       "      <td>The Dark Knight</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2008</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>456466</td>\n",
+       "      <td>8.9</td>\n",
+       "      <td>tt0050083</td>\n",
+       "      <td>12 Angry Men</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1957</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>19132</td>\n",
+       "      <td>1.7</td>\n",
+       "      <td>tt4458206</td>\n",
+       "      <td>Code Name: K.O.Z.</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2015</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>11566</td>\n",
+       "      <td>1.5</td>\n",
+       "      <td>tt4009460</td>\n",
+       "      <td>Saving Christmas</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2014</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>25531</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0270846</td>\n",
+       "      <td>Superbabies: Baby Geniuses 2</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>12885</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0421051</td>\n",
+       "      <td>Daniel der Zauberer</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>30713</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0060666</td>\n",
+       "      <td>Manos: The Hands of Fate</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1966</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  can_rate                                              image  num_votes  \\\n",
+       "0     True  {u'url': u'https://images-na.ssl-images-amazon...    1715396   \n",
+       "1     True  {u'url': u'https://images-na.ssl-images-amazon...    1172475   \n",
+       "2     True  {u'url': u'https://images-na.ssl-images-amazon...     803348   \n",
+       "3     True  {u'url': u'https://images-na.ssl-images-amazon...    1701815   \n",
+       "4     True  {u'url': u'https://images-na.ssl-images-amazon...     456466   \n",
+       "0     True  {u'url': u'https://images-na.ssl-images-amazon...      19132   \n",
+       "1     True  {u'url': u'https://images-na.ssl-images-amazon...      11566   \n",
+       "2     True  {u'url': u'https://images-na.ssl-images-amazon...      25531   \n",
+       "3     True  {u'url': u'https://images-na.ssl-images-amazon...      12885   \n",
+       "4     True  {u'url': u'https://images-na.ssl-images-amazon...      30713   \n",
+       "\n",
+       "   rating     tconst                         title     type  year  \n",
+       "0     9.3  tt0111161      The Shawshank Redemption  feature  1994  \n",
+       "1     9.2  tt0068646                 The Godfather  feature  1972  \n",
+       "2     9.0  tt0071562        The Godfather: Part II  feature  1974  \n",
+       "3     9.0  tt0468569               The Dark Knight  feature  2008  \n",
+       "4     8.9  tt0050083                  12 Angry Men  feature  1957  \n",
+       "0     1.7  tt4458206             Code Name: K.O.Z.  feature  2015  \n",
+       "1     1.5  tt4009460              Saving Christmas  feature  2014  \n",
+       "2     1.9  tt0270846  Superbabies: Baby Geniuses 2  feature  2004  \n",
+       "3     1.9  tt0421051           Daniel der Zauberer  feature  2004  \n",
+       "4     1.9  tt0060666      Manos: The Hands of Fate  feature  1966  "
+      ]
+     },
+     "execution_count": 221,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 223,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "xtext = []\n",
+    "rating = []"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 224,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<Review: u'Why do I want to wri'>\n",
+      "<Review: u'Rather than concentr'>\n",
+      "<Review: u'\\nThis movie is way t'>\n",
+      "<Review: u\"We've been subjected\">\n",
+      "<Review: u'\\nAn excellent courtr'>\n",
+      "<Review: u'This shameful movie '>\n",
+      "<Review: u'For those of us who '>\n",
+      "<Review: u'The Last Movie Direc'>\n",
+      "<Review: u'A week ago i watched'>\n",
+      "<Review: u'Some films are so ba'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "for tconst in df['tconst']:\n",
+    "    reviews = imdb.get_title_reviews(tconst, max_results=1)\n",
+    "    print reviews[0]\n",
+    "    xtext.append(reviews[0].text)\n",
+    "    rating.append(reviews[0].rating)\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 231,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "#what if we wanted multiple reviews for a movie?\n",
+    "xtext = []\n",
+    "rating = []\n",
+    "\n",
+    "for tconst in df['tconst']:\n",
+    "    reviews = imdb.get_title_reviews(tconst, max_results=2)\n",
+    "    for movie in reviews:\n",
+    "        xtext.append(movie.text)\n",
+    "        rating.append(movie.rating)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 232,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 1, 1, 1, 1, 10, 10, 1, 1, 1, None]"
+      ]
+     },
+     "execution_count": 232,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "rating"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 409,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>can_rate</th>\n",
+       "      <th>image</th>\n",
+       "      <th>num_votes</th>\n",
+       "      <th>rating</th>\n",
+       "      <th>tconst</th>\n",
+       "      <th>title</th>\n",
+       "      <th>type</th>\n",
+       "      <th>year</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>19132</td>\n",
+       "      <td>1.7</td>\n",
+       "      <td>tt4458206</td>\n",
+       "      <td>Code Name: K.O.Z.</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2015</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>11566</td>\n",
+       "      <td>1.5</td>\n",
+       "      <td>tt4009460</td>\n",
+       "      <td>Saving Christmas</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2014</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>25531</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0270846</td>\n",
+       "      <td>Superbabies: Baby Geniuses 2</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>12885</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0421051</td>\n",
+       "      <td>Daniel der Zauberer</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>2004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>True</td>\n",
+       "      <td>{u'url': u'https://images-na.ssl-images-amazon...</td>\n",
+       "      <td>30713</td>\n",
+       "      <td>1.9</td>\n",
+       "      <td>tt0060666</td>\n",
+       "      <td>Manos: The Hands of Fate</td>\n",
+       "      <td>feature</td>\n",
+       "      <td>1966</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  can_rate                                              image  num_votes  \\\n",
+       "0     True  {u'url': u'https://images-na.ssl-images-amazon...      19132   \n",
+       "1     True  {u'url': u'https://images-na.ssl-images-amazon...      11566   \n",
+       "2     True  {u'url': u'https://images-na.ssl-images-amazon...      25531   \n",
+       "3     True  {u'url': u'https://images-na.ssl-images-amazon...      12885   \n",
+       "4     True  {u'url': u'https://images-na.ssl-images-amazon...      30713   \n",
+       "\n",
+       "   rating     tconst                         title     type  year  \n",
+       "0     1.7  tt4458206             Code Name: K.O.Z.  feature  2015  \n",
+       "1     1.5  tt4009460              Saving Christmas  feature  2014  \n",
+       "2     1.9  tt0270846  Superbabies: Baby Geniuses 2  feature  2004  \n",
+       "3     1.9  tt0421051           Daniel der Zauberer  feature  2004  \n",
+       "4     1.9  tt0060666      Manos: The Hands of Fate  feature  1966  "
+      ]
+     },
+     "execution_count": 409,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "bottom.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 233,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[u'Why do I want to write the 234th comment on The Shawshank Redemption? I am not sure - almost everything that could be possibly said about it has been said. But like so many other people who wrote comments, I was and am profoundly moved by this simple and eloquent depiction of hope and friendship and redemption. \\n\\nThe only other movie I have ever seen that effects me as strongly is To Kill a Mockingbird. Both movies leave me feeling cleaner for having watched them.\\n\\nI didn\\'t intend to see this movie at all: I do not like prison movies and I don\\'t normally watch them. I work at a branch library and one day as I was checking The Shawshank Redemption out to one of our older patrons, she said to me, \"Whenever I feel down or depressed, I check out this movie and watch it and it always makes me feel better.\" At the time, I thought that was very strange. One day there was nothing on TV except things I absolutely would not watch under any circumstance or things that I had seen too many times already. I remembered what she said, so I watched it. I have watched it many many times since then and it gets better with every showing.\\n\\nNo action, no special effects - just men in prison uniforms talking to each other.\\n\\nThe Shawshank Redemption and To Kill a Mockingbird are the best movies I have ever seen. I do not judge it by it\\'s technical merits - I don\\'t really care about that. I have read that Citizen Kane or The Godfather or this or that movie is the best movie ever made. They may have the best technique or be the most influential motion pictures ever made, but not the best. The best movies are ones that touch the soul. It takes a movie like The Shawshank Redemption to touch the soul.',\n",
+       " u\"\\nCan Hollywood, usually creating things for entertainment purposes only, create art?  To create something of this nature, a director must approach it in a most meticulous manner, due to the delicacy of the process.  Such a daunting task requires an extremely capable artist with an undeniable managerial capacity and an acutely developed awareness of each element of art in their films, the most prominent; music, visuals, script, and acting. These elements, each equally important, must succeed independently, yet still form a harmonious union, because this mixture determines the fate of the artist's opus.  Though already well known amongst his colleagues for his notable skills at writing and directing, Frank Darabont emerges with his feature film directorial debut, The Shawshank Redemption.  Proving himself already a master of the craft, Darabont managed to create one of the most recognizable independent releases in the history of Hollywood.  The Shawshank Redemption defines a genre, defies the odds, compels the emotions, and brings an era of artistically influential films back to Hollywood.\\n\\nThe story begins with the trial of a young banker, Andy Dufrense, victimized by circumstantial evidence, resulting in a conviction for the murder of his wife and her lover.  After a quick conviction, Andy finds himself serving a life sentence at Shawshank prison, with no hope of parole.  He exists in this prison only in appearance, keeping his mind free from the drab walls around him.  His ability to do this results in the gaining of respect from his fellow inmates, but most of all from Ellis Redding.  Ellis, commonly referred to as Red, finds gainful use of his entrepreneurial spirit within the drab walls of Shawshank by dealing in contraband and commodities rare to the confines of prison.  Andy's demeanor and undeniable sense of hope causes Red to take a deeper look at himself, and the world around him.  Andy proves to Red and the other inmates that in the conventional walls of Shawshank prison convention will find no home in his lifestyle.\\n\\nBy creating the film's firm foundation, the meticulously chiseled screenplay paved the way for this film's success.  Frank Darabont outdoes himself with the phenomenal adaptation of Stephen King's equally noteworthy novella, Rita Hayworth and Shawshank Redemption.  In this novella, King demonstrates that he can break free from the genre he dominates and still create a marvelous piece of modern literature.  Though the film mirrors the novella in many ways, Darabont illustrates a focused objective of improving upon the areas where the novella came up short, resulting in one of the best book to film transitions ever.\\n\\nWhile maintaining some of the poetic and moving dialogue of the novella, Darabont also proves that a film's score can generate a great deal of emotional response from its audience, as dialogue does.  He employs the cunning Thomas Newman, son of the legendary Hollywood composer, Alfred Newman.  Darabont shows recognition for the film's needs by employing Newman, who makes the gentle piano chords whisper softly to the viewer, as if a part of the scripted dialogue.  Newman lends himself to individualism and tends to drive more towards the unique in the realm of score composition.  His effort in Shawshank did not go unnoticed, as his score received an Oscar nomination in 1995.  While unique and independent, Newman's score never once intrudes on your concentration or distracts from the film.\\n\\nWith work from vast array of talented scene designers, costume designers, composers, cinematographers, and various other Hollywood artists, the cast of The Shawshank Redemption had a strong foundation to work with.  The marvelous cast of this film will dazzle you with some of the most convincing performances you will witness in a film.  While both Tim Robbins and Morgan Freeman shine as Andy and Red, respectively, the true spectacle of acting lies within the plethora of amazing supporting actors who easily disappear into their roles.  Most noticeable of these, the veteran film star James Whitmore, who portrays the elderly Brooks Hatlen.  Brooks, a man incarcerated for an unmentioned crime for so long that he finds himself attached to the Shawshank and the daily life he has lead.  Each of these actors show a true dedication to their art, and a focused purpose in their motivations, creating a convincing setting that never once caters to anything unbelievable.\\n\\nWith all of the aesthetic touches and attention to cinematic detail, the most beautiful part of the film lies within its thematic material, such as its focus on the human desires for the most abstract concepts, like hope and freedom.  These themes, which concern things the human spirit undoubtedly yearns for, seem so intricately woven into the plot that it easily draws its audience in to its story.  Though full of hardened criminals, your heart will go out to these men as they display the most basic of human emotions, and deliver some of the most quotable lines in a film to date.  Like a great novel, this film manages to succeed at greater things than simply entertaining an audience.  Darabont tells his story most masterfully, illustrating principles and inspiring his audience to think.  He leaves us a\\npoignant film with a powerful message of hope, and redemption, something we all seek.\\n\\nThis film manages to redeem Hollywood in the eyes of people who feared it long lost in a dark sea of clich\\xe9s and predictability.  Darabont shows us that artists still work in the Hollywood studios and production facilities. These artists show their capability to produce art; real art that inspires you to look at the deeper aspects of life and the world around you.  The Shawshank Redemption delivers much-needed breath of fresh air for anyone who realizes the capability of film.  It proves that masters of the craft still live on this earth, and still bless us with timeless masterpieces that we will never forget.\\n\",\n",
+       " u\"Rather than concentrating on everything that is great about The Godfather, a much easier way for me to judge its quality is on what is bad about it. Almost every film has something that I don't like about it, but I can honestly say that I wouldn't change anything about The Godfather. There is nothing weak about it and nothing that stands out as bad. That's why it gets ten out of ten.\\n\\nThis is one of those films that made me wonder why I hadn't seen it earlier. The acting from everyone involved is great, Marlon Brando comes across perfectly as the head of the family, and James Caan and Al Pacino are excellent as his sons. The soundtrack by Nino Rota is also very memorable, bringing back memories of the film every time I hear it. The plot has to be excellent for it to get ten out of ten, and it is, it's far from predictable and the film is the definition of a great epic.\\n\\nThe film is pretty shocking in the way every death occurs almost instantaneously, and as it spans ten years so many different things happen and every minute of it is great entertainment. It's a well-made and entertaining film that is only the first part of a trilogy, but it stands on its own as a wonderful film in its own right. If you haven't seen it, what are you waiting for? This was one acclaimed film that didn't disappoint.\",\n",
+       " u'\\nThis is by far the best movie ever to give a portrait organized crime, this movie goes deep inside and shows it all inside out..\\n\\nWith superb acting by especially Al Pacino as Mike Corleone and Marlon Brando as Don Vito corleone this movie shows how one of the head mafia families in New York works, it gives a detailed picture of how their business runs and what kinda chances they got to take on their business, for example their denial to step inside the narcotic business brings on alot of troubles, but also it shows what kinda sacrifices they make, every day could be their last day..\\n\\nAl Pacino shines above all in this movie, as the smart boy of the family he returns after fighting a war for his country, at that time not involved in the family business, but it doesn\\'t take long before the war breaks lose and he see no other ways than to step in and fight for his family.\\n\\nThis is definetely a \"must see\" masterpiece.',\n",
+       " u'\\nThis movie is way to be good to be labelled a sequel to The Godfather . Rather it is more of a companion piece to the original and the two perfectly compliment each other . IT is both a sequel and prequel showing the rise of the young vito and moral decline of Micheal . Both characters are brought to life with uncanny ability by Robert  DeNiro and Al Pacino . To say that these two are good actors is like saying that a nuclear bomb makes a loud noise and in this movie they prove why they are at the top of their respective crafts .\\n\\nAl Pacino is the standout in the ensemble cast and its amazing how his eyes have changed from the first part . They are now cold , ruthless and unemotional and betray the price which Micheal Corleone has paid for power .\\n\\nWatch this movie and learn why it is the greatest gangster film of all time.\\n',\n",
+       " u'\\nThe original Godfather is a brilliant work. It is in a sense a voyeuristic delight, allowing us to see the mafia from the inside - we become part of the family. It single-handedly change the world\\'s view of organized crime, and created a cast of sympathetic characters, none of whom have a shred of common morality. It was the highest grossing movie of its time and Brando created a cultural icon whose influence resonates as strong today as it did in 1972.\\n\\nAs extraordinary an achievement as this is, Part II is even better. It easily receives my nod as the best picture ever made. I have seen it at least 20 times, and each time its 200 minutes fly by.\\n\\nThe movie uses flashbacks to brilliantly weave two tales. The main story is the reign of Michael Corleone as the world\\'s most powerful criminal. Now reaping the benefits of legalized gambling in Las Vegas, Michael is an evident billionaire with an iron fist on a world of treachery.\\n\\n\\nBehind this, Director Francis Ford Coppola spins the tale of the rise of Michael\\'s father, Vito, to the center of the New York mafia. It is these scenes that make the film a work of art. Without spoiling, I will simply say the Robert DeNiro as the young Vito is the best acting performance of all time, a role  for which he won a richly deserved Oscar.\\n\\nThe screenplay is full of delicious little underworld nuggets (\"Keep your friends close .....\", \"I don\\'t want to kill everyone, just my enemies\"), while it blows a dense, twisted plot past you at a dizzying and merciless pace. The cinematography is depressing and atmospheric. The score continues in the eerie role of its predecessor, foretelling death and evil.\\n\\nAll of this makes the movie great and infinitely watchable. But it\\'s what\\'s deeper inside this film ... what it is really about ... that is its true genius.\\n\\nThe Godfather Part II is not really a movie about the mafia, it is a movie about a man\\'s life long struggle. Michael controls a vast empire that is constantly slipping out of his hands. He grows increasingly distrustful and paranoid, and even shows signs that he hates his own life. Michael almost seems to resent the fact that he is a natural born crime lord, a man who puts the family business ahead of everything.\\n\\nThe great Don Michael Corleone can never come to terms with one simple fact.... his father\\'s empire was built on love and respect, Michael\\'s empire is built on fear and violent treachery.\\n\\nSee this movie. It\\'s three-and-a-half hours very well spent.',\n",
+       " u\"We've been subjected to enormous amounts of hype and marketing for the Dark Knight. We've seen Joker scavenger hunts and one of the largest viral campaigns in advertising history and it culminates with the actual release of the movie.\\n\\nEverything that's been said is pretty much spot on. This is the first time I can remember where a summer blockbuster film far surpasses the hype.\\n\\nFor as much action as there is in this movie, it's the acting that makes it a great piece of work. Between all the punches, explosions and stunt-work is some great dialog work. All the actors have their moments.\\n\\nBale's Batman is the definitive Batman because we see everything in this character finally on film. Martial arts skills, cunning, great tactical thinking, forensic application, technological genius to advance or improve Luscious Fox's inventions/technological breakthroughs, intimidating personality, and even a little swashbuckling. \\n\\nAs for Heath, yes he gets credit for his performance as the Joker. But you have to also recognize Jonathan and Chris Nolan for the writing and treatment of the character. It's not just the fact that Ledger makes the Joker so menacing, but the Nolans have given the character this great manifesto that drives its actions. The Joker's stance on chaos, order, anarchy, the morality of the average modern human being make the character so interesting psychologically. The Nolans drafted a complex character and only a perfect performance could've pulled something like this off. That's how difficult of a role this was, and that's why Ledger's performance is so great.\\n\\nThis isn't an action movie. It's a film that explores literary themes of the hero and villain, as well as order and anarchy. Yes, listen to the dialog because it's all in there.\",\n",
+       " u'Christopher Nolan\\'s second bundle of joy \"The Dark Knight\" EXCEEDED all \\r of my expectations!!! With the success of 2005\\'s reboot of the Batman \\r franchise, they took what was already established and expanded it, \\r amped it up, and gave a deeper, darker and brooding story that is more \\r gripping and the suspense is likely to catch you of guard several times \\r throughout. Christian Bale delves more deeper into Batman, sworn to \\r fight evil and injustice, though also quite reluctant and uncertain if \\r his crusade can ever end and cleanse his inner turmoil from his \\r fractured soul due to the murder of his beloved parents. But with the \\r help of his trusted butler/ally Alfred (played superbly by Michael \\r Cane) grounds him, gives him moral support, and keeps him in check. But \\r the real star of the show is Heath Ledger as Batman\\'s most deadly \\r enemy, The Joker. I can HONESTLY tell you that: as good as Jack \\r Nicholson was in Batman\\'89 he is CHILD\\'S PLAY compared to this Joker. \\r He is sadistic, psychotic, and downright SCARIER and PSYCHOLOGICALLY \\r disturbing than the previous incarnation of The Clown Prince of Crime \\r and Ledger gives it his all to do him justice. Along with the original \\r cast comes some fresh faces such as Aaron Eckhart, Maggie Gyllenhaal \\r and more. I must say though I liked Katie Holmes, Gyllenhaal gives a \\r much better performance and is a far cry from the \"damsel-in-distress\" \\r stereotype (though there\\'s a little of it, THANKFULLY) that\\'s common in \\r films. Bale and Gyllenhall have MUCH better chemistry this time around \\r more so than Holmes. Even better, the fight sequences are vastly \\r improved and feature more brutal and bone crushing combat than \"Begins\" \\r in addition to new technology at Batman\\'s disposal.\\r \\r\\nAlso worth mentioning is screenwriter Jonathan Nolan, who gives the \\r film an added frosting to an already delicious cake.\\r \\r\\nSimply put, The Dark Knight is totally more bad ass than \"Begins.\" The \\r action is great, and the plot is more deeper and engrossing. I applaud \\r Christopher Nolan, Christian Bale, and especially Heath Ledger (who \\r sadly passed away earlier this year) and all those aboard for believing \\r in Mr. Nolan\\'s talents for this second installment. Although some may \\r feel a bit of melancholy over Ledger\\'s death, but as a final note I \\r will say this sincerely from my heart: Remember Heath Ledger and honor \\r him in your minds and hearts not only for his performances, but as a \\r human being and father to his daughter Matilda \\r Ledger. May we issue him best wishes for his family and friends and his \\r daughter for years to come. Remember . . . Honor him not only for this \\r role and past roles, but as an incredible individual and talented \\r actor.\\r \\r\\nRest in peace. Heath Ledger: 4/4/1979-1/22/2008.',\n",
+       " u'\\nAn excellent courtroom drama with a unique twist. Instead of following the trial itself, the viewer has a unique chance to observe the events behind the closed doors of a jury room. The film begins with the end of the trial. The jurors retire to deliberate the case. A preliminary vote is taken and the result is 11:1 in favour of the guilty verdict. Eleven jurors have raised their hands to convict a young man of killing his father. Only Juror #8 has doubts. At first even he does not truly believe the young man to be innocent but notes (rightfully) that the case for the defence might have been presented in a more convincing manner and that the boy might be given the benefit of a doubt. Since the boy is to be executed if found guilty his life is now in the hands of the jury and juror #8 reasons that the least they could do is talk about the case a bit. As time goes on some of the jurors change their minds and find that there is perhaps enough reasonable doubt not to convict the young man after all. But not everyone is easy to convince.\\n\\nAlthough the plot of the film is excellent and it is fascinating to see what little things can influence which way a verdict goes, where this film really succeeds is in presenting the characters of the 12 jurors. The character of each of the jurors emerges through a wonderful mix of perfect casting, excellent dialogue and near-flawless acting.\\n\\nJuror #1 - a simple man who clearly does not understand the full complexity of the task that lies before him but is trying to do everything not to let anyone else find this out. He appears at ease only once during the film - when he talks about football. He has the misfortune to be selected foreman of the jury - a task he clearly does not relish.\\n\\nJuror #2 - a small, quite man, clearly unaccustomed to giving his own opinion much less to expecting his views to be of any importance. Apparently he finds solace in his job - he is an accountant.\\n\\nJuror #3 - probably the most complex personality in the film. Starts off like a pleasant self-made successful businessman, he analyses the case impartially, explains his arguments well and is reasonably self assured. As time goes on he becomes more and more passionate and seems to be somehow personally involved with the case.  He also starts to show some signs of slight mental instability. Wonderfully played by Lee J. Cobb - this is the character you remember after the film is over.\\n\\nJuror #4 - self assured, slightly arrogant stockbroker. Obviously considers himself more intelligent than anyone else in the room, he approaches the case with cool heartless logic but (as one of the jurors says - \"this is not an exact science\") he does not take into account the feelings, the passions, the characters of the people involved in the case. He is conspicuous by the fact that he is the only juror that does not take his jacket off (it is a very hot day).\\n\\nJuror #5 - here is a man under great emotional stress. He comes from the same social background as the accused boy - with who he almost unwillingly seems to identify with. Paradoxically this appears one of the main reasons for him voting guilty - he does not want compassion to influence him - so ironically it does.\\n\\nJuror #6 - a simple man, quite readily admitting that everyone in the room is better qualified than he is to make decisions and offer explanations. But he really wants to see justice done and it worries him that he might make a mistake.\\n\\nJuror #7 - the only one that really has no opinion on this case. Literally throughout the film his thoughts are never on the case - he talks of baseball, of the heat, of fixing the fan but the only reason he has for voting this way or that is to speed things up a bit so he might be out of the jury room as soon as possible. Not an evil man he just has no sense of morality whatsoever - he can tell right from wrong but does not seem to think it\\'s worth the bother.\\n\\nJuror #8- a caring man, has put more thought into the case than any of the other jurors. He tries to do his best even in the face of seemingly impossible odds.\\n\\nJuror #9 - a wise old man with his great life experience has quite a unique way of looking at the case.\\n\\nJuror #10 - the most horrifying character in the film. Votes guilty and does not even try to hide the fact that he does so only because of the boy\\'s social background. The tragedy comes from the fact that his own social position is only a cut above the boy\\'s - which makes him all the more eager to accentuate the difference.\\n\\nJuror #11 - an immigrant watchmaker, careful methodical man, well mannered and soft spoken. respects the right of people to have different opinion to his - and is willing to look at both sides of the problem. Loses his temper only once - horrified by the complete indifference of juror #7.\\n\\nJuror #12 - a young business type - perhaps he has his own opinions - but is careful to hide them. What he has learnt out of life seems to be that intelligence is equal with agreeing with what the majority of people think.\\n\\nThe film succeeds in doing something very rare today - developing an intelligent plot while also developing 12 believable, memorable and distinct characters.\\n',\n",
+       " u'\\nThis film is superb, in fact as Shakespeare once said \"Its the bees\\' knees\".  The film captivates the audience from the beginning.  Each of the twelve jurors are introduced to us as they are introduced to themselves. The characters are well draw out and individual, each with his own personality.\\n\\nThe tension of the characters draws the audience in from the start.  We imagine that the case is open and shut, 11 me saying guilty and 1 not.  We feel the discomfort of Henry Fonda as the other characters belittle and mock how he can see any reasonable doubt in the case.  But we also share his victories and the enthusiasm as he proceeds to refute or add doubt to the arguments for guilty and are captivated and draw in as other jurors begin to see doubt in the proceedings.\\n\\nThe audience can also see the arguments for guilty and wonder if Fonda\\'s character is correct in saying that he doubts. Yet they also feel the shame of the characters as he disproves that a previously sound theory is iron tight, joining his side as members of the jury do.\\n\\nOn top of this they are wonderfully woven in human elements such as the misconceptions that influence people and the growing tension between different characters.  This is brought to life even more by the amazing performances, Fonda, Lee J Cobb and Joseph Sweeney are of particular note.\\n\\nI started watching this film on a bored relaxed laying about day but by the end i was on the edge of the seat with my hands on my knees feeling more tense than a politician on results day.\\n\\nHow a film should be made.  Modern directors take note(thats ur telling off for the day) 10/10',\n",
+       " u'This shameful movie is about how government of Turkey is run by idealist. Which in fact is a murderer and a dictator. They not only change real events to their fantasy world conditions, they also used deceased engineers for their own propaganda.\\n\\nThis movie is 2015 edition of Triumph of Will by Nazi Germany. I hope everybody will remember terrible people involved with this movie and cast them out from society. \\n\\nP.S. Did you know this movie is screened for free to the audiences by government with tax payers money? Shame on anybody who watches this crap.',\n",
+       " u\"A really horrible film which only aims to increase support for the idiotic things the government did and will do. It implies that almost every bad event happened in the past 10-15 years is because of a terrorist organization which works together with CIA, Mossad etc. It is so idiotic that it shows the gezi protests like something that was controlled behind a screen by the same organization (which clearly doesn't exist) What can I say, if you are stupid enough to believe these things (unfortunately many people are) you may like the film but that doesn't change the fact that it's a poorly written and pathetically directed propaganda and a decent director could do something better while he's in the toilet.\",\n",
+       " u'For those of us who have watched Kirk Cameron pontificate on the wonders of the banana, or read his musings on the legitimacy of the existence of fire-breathing dragons, we know that Kirk Cameron himself is comedy gold. One might expect more hilarity from Cameron in Saving Christmas, but Cameron actually intentionally tries to build a comedy here, and the result is an unfunny, unfocused, interminable mess.\\n\\nThe film begins with an uncomfortable scene involving Kirk Cameron sitting in a chair, lecturing at the audience. \"They don\\'t want us to love Christmas,\" Cameron declares authoritatively, never bothering to define exactly who \"they\" are. Cameron drones on for several more minutes, and at this point in the film, I heard a kid in the back of the theater yawn loudly\\x97perhaps an audible protest that this film would not be the exciting romp promised on the poster.\\n\\nFinally, the film cuts away from Kirk Cameron, and we see several characters enjoying a Christmas party. But then we see Kirk Cameron again, the film freezes, and we hear Kirk Cameron narrating about himself: \"That\\'s me\\x97Kirk!\" More lecturing ensues.\\n\\nEventually, a character by the name of Christian (almost as clever as \"Josh Wheaton\"), a Christian himself, despondently finds his way to a car, apparently disillusioned by the materialism of Christmas. Enter Kirk Cameron, who enters the vehicle and does what he does best\\x97more lecturing.\\n\\nThe majority of the film takes place in this car as Kirk lectures to Christian, with occasional cutaways to Biblical imagery. Cameron tries to make the case that Christmas traditions, such as celebratory trees and gifts, all somehow originated with Christianity, not paganism. (Never mind the fact that ancient paganism predates Christianity.) \"Last time I checked, God created the winter solstice!\" is the type of asinine reasoning you\\'ll hear from Kirk Cameron throughout the film. Cameron\\'s facts are both dubious and sparse, and his connections are spurious\\x97but Christian is nevertheless invariably blown away by Kirk Cameron\\'s apparently amazing insight.\\n\\nPerhaps aware that interminable lecturing on its own would be unbearable for an audience, the film provides characters with quirky personalities in an effort to break up the tedium. In particular, we are treated to a scene back in the house of two characters rambling schizophrenically as they drink hot chocolate. It has nothing to do with Christian\\'s story, it makes the movie feel unfocused, it goes on for far too long, and if my theater is any indication, it is not funny at all. In fact, there was dead silence in my theater throughout the entire run of this \"comedy\" film.\\n\\nThe film ends with a dance sequence that feels like it lasts ten minutes, as well as multiple, gratuitous blooper scenes\\x97I suppose for no reason other than to pad the running time. Just when you think it\\'s finally over, we see Kirk Cameron again, and he continues to lecture the audience\\x97this time about how materialism is just fine, because Jesus came to us in a material body, after all.\\n\\nOne gets the impression that Kirk Cameron actually started reading his own Bible, was disturbed by what he found (such as Jesus\\' instruction to \"go sell your possessions and give to the poor\"), and produced this film as a desperate justification for his own hypocrisy.\\n\\nAt my theater, nobody laughed, and nobody stayed for the end credits. This purported comedy film fails at every level. If you\\'re really looking for a laugh, go back and take a look at what Kirk Cameron and Ray Comfort have to say about the glorious design of the banana.',\n",
+       " u'It\\'s no secret that, on both the mainstream and independent circuit of film, Christian cinema has been a big focus in 2014. Films like \"Heaven is for Real,\" \"Noah,\" \"Son of God,\" and next month\\'s \"Exodus: Gods and Kings\" have all catered to the faithful in some way and have gone on to achieve uniformly strong financial numbers as well. The independent circuit has seen big hits like \"God\\'s Not Dead\" and marginal successes like \"Left Behind,\" \"Mom\\'s Night Out,\" \"Persecuted,\" and \"When the Game Stands Tall,\" all of which finding ways to connect with their target audience in at least recognizing their faith in the cinema, a place where it\\'s fair to believe the religious demographic has felt ignored. Former Television star and devout, outspoken Christian Kirk Cameron has now thrown his hat in the ring, latching on to this newfound trend, and effectively making not only the worst film of its genre but the worst film of 2014. \"Kirk Cameron\\'s Saving Christmas\" is a disjointed mess, structurally pathetic and morally bankrupt as we watch scenes interwoven with little coherency, dialog written and delivered in its most wooden form, and wonderful morals to teach our children, like \"materialism is good.\" \\n\\nThe film begins with Cameron sitting in a blatantly artificial living room, decorated with more Christmas lights and flair than Macy\\'s after Thanksgiving passes, giving us an introduction to the film at hand. He states the biggest problem with the Christmas season is the \"people\" who want to segregate the spread of faith and good cheer to the private homes of those who celebrate the holiday or simply want the holiday done away with all together. He rambles on for about three minutes as the introduction sets the perfect theme for this film; it\\'s a circumventing project that never results in a specific or thoughtfully-articulated point.\\n\\nWe cut to a Christmas party held by Cameron\\'s sister, where a Santa has been hired, the tree has been erected, the house has been decorated, a feast has been prepared, and everyone is in an incorruptibly cheery mood; everyone except Cameron\\'s brother-in-law Christian (director Darren Doane), who is seen moping around the house before quietly slipping away to his car. Kirk follows Christian and learns the materialism of Christmas bothers him immensely, as he watches kids beg for toys they won\\'t play with in three weeks and parents max out their credit cards, giving way to the materials and the illuminating tree in the center of the room, and all while neglecting the baby Jesus in the manger, who is the ultimate \"reason for the season.\"\\n\\nCameron begins to initiate flashbacks to biblical times to \"justify\" why we have the Christmas traditions that we do. However, it\\'s not enough that we get a history lesson told from the enormously biased lens of Cameron, but in a dodgy and muddled manner. Cameron gets absorbed in the significance of baby Jesus\\'s swaddling cloth and the original mean-spirited roots of Saint Nicholas (something that will undoubtedly scare and confuse children), never addressing Christian\\'s true distaste for the holiday season. Kirk meanders for about forty minutes, talking himself in incoherent and redundant circles, never addressing Christian\\'s questions in a way that we can extract counterpoints or citing Christmas\\'s Pagan and cultist roots (if you\\'re going to show Saint Nicholas as a brute, at least address the backstory).\\n\\nInterjected in these ridiculously dry biblical flashbacks and in-car dialogs are exaggerated characters masquerading as likable people with personalities drawn so wide they are desperately unfunny. We see two party guests discuss \"The War on Christmas,\" relating it to several other conspiracy theories that just feels like a soundoff of paranoia. We get a few minutes of dead-end, annoying conversation and some of the worst displays of acting this year before it\\'s back to the car for a half-assed lecture. \\n\\n\"Saving Christmas\" ends with an abhorrent dance number to an incorrigible techno/rap hybrid, with members of the cast obnoxiously dancing and doing slow-motion choreography together. We end things with a perfunctory voice-over with Cameron before we\\'re greeted by almost ten minutes of closing credits showing bloopers, outtakes, and a barrage of other things padding this project to just barely being feature- length (eighty minutes). If my plot synopsis sounds like it has not made any sense, then I have effectively lived up to the structure and the narrative pace of this particular film.\\n\\nJust by comparing the full-length film to its trailer, you can tell \"Saving Christmas\" was Cameron\\'s last minute idea to cash in on the Christian cinema craze of the year. The trailer for the film talks about how Christmas has been corrupted by materialism and the political correctness of the holiday. However, Cameron blatantly contradicts his thesis when he states during the closing monologue that \"materialism is good\" because Christmas is about \"God taking possession of a material body.\" Aside from ushering in a pathetic excuse for a moral at the end of a film about Christmas, the cardinal sins committed here run amuck: a sloppy narrative hodgepodge of biblical flashbacks, inept lecturing, and pointless filler clearly padding a small runtime, atrocious acting on all fronts, a desperate attempt at \"staying hip\" and keeping the attention of the audience by throwing in a hip-hop dance number, contemptible morals, and failure to address or even stick to a cogent thesis. Kirk Cameron and company should be required to volunteer at local charities or help cater several breakfasts with Santa to make up for such a yuletide atrocity.',\n",
+       " u\"The Last Movie Directed By The Great Actor Bob Clark Before His Death. Super Babies: Baby Geniuses 2 Is A Masterpiece Family Movie With Academy Award Winner Jon Voigt In It.\\n\\nThe Budget Of The Movie Was 20 Million $.That clearly means that the producers of the film care to make a fantastic movie and not to make a cheap tasteless movie.\\n\\nI don't give a damn if Most Film Critics Criticized the Movie.Ask Your Kids Who Don't Know Flattery about Super Babies: Baby Geniuses 2,90% of Children Will Like It .\\n\\nThree Countries Including The USA,United Kingdom & Germany Participated In Making This Splendid Movie.\\n\\nThe Movie Is A Clever Made Comedy with adventure and outstanding direction. The Super Babies Are Really So Convincing,so cute and acted like professionals despite the fact they are amateur babies. 2 thumbs up. My Vote Is 10 Out Of 10 For This Is One Of The Best Movies Ever Made.\",\n",
+       " u'Despite The Negative Unfair Reviews,Superbabies: Baby Geniuses 2 is One Of The Best Movies I Have Ever Seen.The Movie Is So Funning & Creative.\\n\\nPlot:Following on from the plot of the last movie, four babies can communicate with each other using \\'baby talk\\', and have knowledge of many secrets. The baby geniuses become involved in a scheme by media mogul Bill Biscane (Jon Voight), later revealed to be known as Kane, who kidnaps children everywhere. Helping the geniuses is a legendary super baby named Kahuna (he became powerful due to drinking a special chemical, much to the envy of his brother Kane), who stops Biscane\\'s plots and saves children from being kidnapped by Biscane and his minions. He joins up with several other babies in an attempt to stop Biscane, who intends to use a state-of-the-art satellite system to control the world\\'s population by brainwashing them and forcing people to not be active and watch TV the rest of their lives.\\n\\nA Very Enjoyable Comedy Movie,I Laughed and forgot my pain and Believe Me:\" No Scene Whatsoever In This Spectacular Movie Is Boring\"!.',\n",
+       " u\"A week ago i watched Daniel der Zauberer. I wanted to give it a chance after all the bad reviews it had received. This foolish idea ended up being just a waste of my precious time.THe plot reads as follows: A boy who became famous through a TV show has problems with people who don't like his music. The main character is played by daniel kueblboeck, the new star from Germans pop idol (so Kueblboeck actually plays himself). After all I'm proud i made it through the movie. To be honest i only watched it till the end to write about it. The movie itself is so bad it almost hurts physically. So this is a warning : DO NOT WATCH THIS MOVIE!! DO NOT GIVE IT A CHANCE!( unless you are either a masochist or a k\\xfcblb\\xf6ck fan). Don't say i didn't want you. This movie should receive a 0 Voting instead of an awful.\",\n",
+       " u'This is probably the worst movie ever.\\n\\nDaniel K\\xfcblb\\xf6ck shouldn\\'t act. Never. Even it\\'s the end of the world as we know it. Never, never, never.\\n\\nSome people give this movie 10 points, because they feel compassion for him, but if you are objective, this is the WORST MOVIE EVER MADE.\\n\\nI know girls like him because of... uhmmm I don\\'t know, but fact is, he isn\\'t an actor, he isn\\'t a real singer. He only passed in the casting show, because he\\'s funny, not because of his \"talent\".\\n\\nThis kind of art-movie is responsible for 90% of eye cancer victims and mental deceases. DON\\'T WATCH THIS MOVIE (except you are drunk or drugged)',\n",
+       " u'Some films are so bad, they\\'re good. Meaning \"fun\" or \"entertaining\" or at least \"interesting\"... But few films can claim to be so dreadful, you actually feel physical pain while viewing them. So bad are these damned few that you don\\'t experience them or watch them: you \"endure\" them. This is the mother of all such films!\\n\\n\"Manos the hands of fate\" is without a doubt the most inept and atrociously awful film ever made. Its poorness is so extreme that of itself it is the film\\'s strongest selling point. The script is non-existent, the acting makes Steven Seagal look like a member of the Royal Shakespeare Company and the editing could have been less horrendously botched by a blind Eskimo with no arms. It is also painfully slow. this film makes might barely last 70 minutes but you will feel like you\\'ve aged ten years by the end of it. That\\'s what makes a film truly bad: the fact that despite its overbearing weaknesses it isn\\'t even entertaining!\\n\\nMany people look back at the sixties and think, with obvious resentment for today\\'s cinematic output, that \"they don\\'t make them like this anymore!\". Watching \"Manos...\" would cure any breed of hardcore nostalgia.\\n\\nIn the end I can not advise against this strongly enough. This is for the masochist in you (or the sadist if you insist on showing it to friends). Any other part of your person can only feel pained or offended by such extreme trash!',\n",
+       " u'Every so often, someone comes onto IMDb (or a similar forum) and declares that such-and-such a film is, and I quote, \"THE WORST MOVIE EVER!!!\" Usually the culprit is the latest big-budget, little-story extravaganza, or some popular work receiving its expected share of backlash. I always laugh a bit when people do this. Clearly, these innocent souls have never seen an episode of \"Mystery Science Theater 3000.\" Specifically, they have never been exposed to the horror that is \"Manos: The Hands of Fate.\" Sure, plenty of movies are bad, but usually if you look hard enough, you can see some evidence that someone on board had at least a vague idea of how to make a film work. Not \"Manos.\" There is not a single shred of competence to be found anywhere in it. It fails on every conceivable level: direction, acting, script, cinematography, sets, costumes, effects, sound, music. Throw in some of the most irritating and idiotic characters you\\'ll ever see, a lot of disturbing sexual subtext, and the result is this pile of cinematic excrement.\\n\\nThe story...well, I guess it\\'s supposed to be one of those \"innocents get lost and stumble upon supernatural evil\" deals. Actually, it\\'s more like an \"irritating family gets lost and stumbles upon a group of vague cultists and their creepy hired hand Torgo\" deal. Anyway, things happen, arguments go in circles, the mom of the family yells for her husband so much you wonder how she ties her shoes in the morning without him, the husband makes so many wrong decisions you wonder if he\\'d be any help with the shoe-tying thing, and the female cultists get into an extended wrestling match, revealing that under their diaphanous Grecian robes they\\'re wearing modern bras and underwear.\\n\\nThere\\'s much more, of course, but \"Manos\" is like a train wreck, or a natural disaster: I could describe it to you, but you\\'d never understand the full level of horror unless you witness it for yourself. So go ahead, watch it, I dare you. At least you can take comfort in the knowledge that, after you\\'ve seen it, nothing else you watch will be quite so bad.']"
+      ]
+     },
+     "execution_count": 233,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "xtext"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 234,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "20\n",
+      "20\n"
+     ]
+    }
+   ],
+   "source": [
+    "print len(rating)\n",
+    "print len(xtext)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 235,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "df_movies = pd.DataFrame({'review': xtext, 'rating': rating})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 236,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>rating</th>\n",
+       "      <th>review</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>Why do I want to write the 234th comment on Th...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nCan Hollywood, usually creating things for e...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>Rather than concentrating on everything that i...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nThis is by far the best movie ever to give a...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nThis movie is way to be good to be labelled ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nThe original Godfather is a brilliant work. ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>We've been subjected to enormous amounts of hy...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>7</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>Christopher Nolan's second bundle of joy \"The ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nAn excellent courtroom drama with a unique t...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>\\nThis film is superb, in fact as Shakespeare ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>10</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>This shameful movie is about how government of...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>11</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>A really horrible film which only aims to incr...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>12</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>For those of us who have watched Kirk Cameron ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>13</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>It's no secret that, on both the mainstream an...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>14</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>The Last Movie Directed By The Great Actor Bob...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>15</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>Despite The Negative Unfair Reviews,Superbabie...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>16</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>A week ago i watched Daniel der Zauberer. I wa...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>17</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>This is probably the worst movie ever.\\n\\nDani...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>18</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>Some films are so bad, they're good. Meaning \"...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>19</th>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Every so often, someone comes onto IMDb (or a ...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "    rating                                             review\n",
+       "0     10.0  Why do I want to write the 234th comment on Th...\n",
+       "1     10.0  \\nCan Hollywood, usually creating things for e...\n",
+       "2     10.0  Rather than concentrating on everything that i...\n",
+       "3     10.0  \\nThis is by far the best movie ever to give a...\n",
+       "4     10.0  \\nThis movie is way to be good to be labelled ...\n",
+       "5     10.0  \\nThe original Godfather is a brilliant work. ...\n",
+       "6     10.0  We've been subjected to enormous amounts of hy...\n",
+       "7     10.0  Christopher Nolan's second bundle of joy \"The ...\n",
+       "8     10.0  \\nAn excellent courtroom drama with a unique t...\n",
+       "9     10.0  \\nThis film is superb, in fact as Shakespeare ...\n",
+       "10     1.0  This shameful movie is about how government of...\n",
+       "11     1.0  A really horrible film which only aims to incr...\n",
+       "12     1.0  For those of us who have watched Kirk Cameron ...\n",
+       "13     1.0  It's no secret that, on both the mainstream an...\n",
+       "14    10.0  The Last Movie Directed By The Great Actor Bob...\n",
+       "15    10.0  Despite The Negative Unfair Reviews,Superbabie...\n",
+       "16     1.0  A week ago i watched Daniel der Zauberer. I wa...\n",
+       "17     1.0  This is probably the worst movie ever.\\n\\nDani...\n",
+       "18     1.0  Some films are so bad, they're good. Meaning \"...\n",
+       "19     NaN  Every so often, someone comes onto IMDb (or a ..."
+      ]
+     },
+     "execution_count": 236,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_movies"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 237,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "df_movies = df_movies.dropna()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 424,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.feature_extraction.text import CountVectorizer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 440,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "CountVectorizer(analyzer=u'word', binary=False, decode_error=u'strict',\n",
+       "        dtype=<type 'numpy.int64'>, encoding=u'utf-8', input=u'content',\n",
+       "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "        ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+       "        strip_accents=None, token_pattern=u'(?u)\\\\b\\\\w\\\\w+\\\\b',\n",
+       "        tokenizer=None, vocabulary=None)"
+      ]
+     },
+     "execution_count": 440,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "cvec = CountVectorizer()\n",
+    "cvec.fit(xtext)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 441,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "Xtrain = cvec.transform(xtext)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 443,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "make_features = TfidfVectorizer(stop_words='english')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 444,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "lower not found",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-444-f29f6d2d5f4e>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mmake_features\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mXtrain\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mfit\u001b[0;34m(self, raw_documents, y)\u001b[0m\n\u001b[1;32m   1283\u001b[0m         \u001b[0mself\u001b[0m \u001b[0;34m:\u001b[0m \u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1284\u001b[0m         \"\"\"\n\u001b[0;32m-> 1285\u001b[0;31m         \u001b[0mX\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit_transform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mraw_documents\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1286\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_tfidf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1287\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mfit_transform\u001b[0;34m(self, raw_documents, y)\u001b[0m\n\u001b[1;32m    815\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    816\u001b[0m         vocabulary, X = self._count_vocab(raw_documents,\n\u001b[0;32m--> 817\u001b[0;31m                                           self.fixed_vocabulary_)\n\u001b[0m\u001b[1;32m    818\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    819\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbinary\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m_count_vocab\u001b[0;34m(self, raw_documents, fixed_vocab)\u001b[0m\n\u001b[1;32m    750\u001b[0m         \u001b[0mindptr\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    751\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0mdoc\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mraw_documents\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 752\u001b[0;31m             \u001b[0;32mfor\u001b[0m \u001b[0mfeature\u001b[0m \u001b[0;32min\u001b[0m \u001b[0manalyze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdoc\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    753\u001b[0m                 \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    754\u001b[0m                     \u001b[0mj_indices\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvocabulary\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mfeature\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m<lambda>\u001b[0;34m(doc)\u001b[0m\n\u001b[1;32m    236\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    237\u001b[0m             return lambda doc: self._word_ngrams(\n\u001b[0;32m--> 238\u001b[0;31m                 tokenize(preprocess(self.decode(doc))), stop_words)\n\u001b[0m\u001b[1;32m    239\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    240\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m<lambda>\u001b[0;34m(x)\u001b[0m\n\u001b[1;32m    202\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    203\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlowercase\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 204\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0;32mlambda\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mstrip_accents\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlower\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    205\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    206\u001b[0m             \u001b[0;32mreturn\u001b[0m \u001b[0mstrip_accents\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/scipy/sparse/base.pyc\u001b[0m in \u001b[0;36m__getattr__\u001b[0;34m(self, attr)\u001b[0m\n\u001b[1;32m    523\u001b[0m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgetnnz\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    524\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 525\u001b[0;31m             \u001b[0;32mraise\u001b[0m \u001b[0mAttributeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mattr\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m\" not found\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    526\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    527\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mtranspose\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mAttributeError\u001b[0m: lower not found"
+     ]
+    }
+   ],
+   "source": [
+    "make_features.fit(Xtrain)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 402,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/anaconda/lib/python2.7/site-packages/ipykernel/__main__.py:1: SettingWithCopyWarning: \n",
+      "A value is trying to be set on a copy of a slice from a DataFrame.\n",
+      "Try using .loc[row_indexer,col_indexer] = value instead\n",
+      "\n",
+      "See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy\n",
+      "  if __name__ == '__main__':\n"
+     ]
+    }
+   ],
+   "source": [
+    "df_movies['review_features'] = make_features.transform(df_movies['review'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 352,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<19x1770 sparse matrix of type '<type 'numpy.float64'>'\n",
+       "\twith 2501 stored elements in Compressed Sparse Row format>"
+      ]
+     },
+     "execution_count": 352,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_movies['review_features'].values[0]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 353,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "1       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "2       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "3       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "4       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "5       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "6       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "7       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "8       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "9       (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "10      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "11      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "12      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "13      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "14      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "15      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "16      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "17      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "18      (0, 1760)\\t0.0785393100189\\n  (0, 1756)\\t0.0...\n",
+       "Name: review_features, dtype: object"
+      ]
+     },
+     "execution_count": 353,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_movies['review_features']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 355,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import LogisticRegression\n",
+    "clf = LogisticRegression()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 356,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "X = make_features.transform(df_movies['review'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 357,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.preprocessing import LabelEncoder\n",
+    "\n",
+    "y = LabelEncoder().fit_transform(df_movies['rating'].values)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 358,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,\n",
+       "          intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,\n",
+       "          penalty='l2', random_state=None, solver='liblinear', tol=0.0001,\n",
+       "          verbose=0, warm_start=False)"
+      ]
+     },
+     "execution_count": 358,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "clf.fit(X,y)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 361,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1.0"
+      ]
+     },
+     "execution_count": 361,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "clf.score(X,y)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 362,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.cross_validation import cross_val_score\n",
+    "cv_scores = cross_val_score(clf, X, y, cv=5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 363,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.6399999999999999"
+      ]
+     },
+     "execution_count": 363,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "cv_scores.mean()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 364,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import LassoCV"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 365,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "Lass_Clf = LassoCV()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 366,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "LassoCV(alphas=None, copy_X=True, cv=None, eps=0.001, fit_intercept=True,\n",
+       "    max_iter=1000, n_alphas=100, n_jobs=1, normalize=False, positive=False,\n",
+       "    precompute='auto', random_state=None, selection='cyclic', tol=0.0001,\n",
+       "    verbose=False)"
+      ]
+     },
+     "execution_count": 366,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Lass_Clf.fit(X,y)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 367,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.064785637231480453"
+      ]
+     },
+     "execution_count": 367,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Lass_Clf.score(X,y)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 368,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "cv_scores = cross_val_score(Lass_Clf, X, y, cv=5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 369,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0.        ,  0.        , -0.11111111, -0.11111111,  0.        ])"
+      ]
+     },
+     "execution_count": 369,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "cv_scores"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 370,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Lass_Clf.mse_path_"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 373,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-0.,  0.,  0., ...,  0., -0., -0.])"
+      ]
+     },
+     "execution_count": 373,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Lass_Clf.coef_"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 374,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(array([211]),)"
+      ]
+     },
+     "execution_count": 374,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.nonzero(Lass_Clf.coef_)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 265,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from bs4 import BeautifulSoup"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 266,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import requests"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 267,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "goodmovies2016url = 'http://www.imdb.com/search/title?sort=user_rating&title_type=feature&year=2016,2016'\n",
+    "goodmovies2016html = requests.get(goodmovies2016url)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 271,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "goodmoviesoup = BeautifulSoup(goodmovies2016html.text,\n",
+    "                             'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 272,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "moviesoupdiv = moviesoup2016.findAll('div', {'class' : 'ribbonize'})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 273,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "50"
+      ]
+     },
+     "execution_count": 273,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(moviesoupdiv)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 274,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<div class=\"ribbonize\" data-caller=\"filmosearch\" data-tconst=\"tt5825058\"></div>"
+      ]
+     },
+     "execution_count": 274,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "moviesoupdiv[0]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 275,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "bs4.element.Tag"
+      ]
+     },
+     "execution_count": 275,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "type(moviesoupdiv[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 278,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['HTML_FORMATTERS',\n",
+       " 'XML_FORMATTERS',\n",
+       " '__call__',\n",
+       " '__class__',\n",
+       " '__contains__',\n",
+       " '__copy__',\n",
+       " '__delattr__',\n",
+       " '__delitem__',\n",
+       " '__dict__',\n",
+       " '__doc__',\n",
+       " '__eq__',\n",
+       " '__format__',\n",
+       " '__getattr__',\n",
+       " '__getattribute__',\n",
+       " '__getitem__',\n",
+       " '__hash__',\n",
+       " '__init__',\n",
+       " '__iter__',\n",
+       " '__len__',\n",
+       " '__module__',\n",
+       " '__ne__',\n",
+       " '__new__',\n",
+       " '__nonzero__',\n",
+       " '__reduce__',\n",
+       " '__reduce_ex__',\n",
+       " '__repr__',\n",
+       " '__setattr__',\n",
+       " '__setitem__',\n",
+       " '__sizeof__',\n",
+       " '__str__',\n",
+       " '__subclasshook__',\n",
+       " '__unicode__',\n",
+       " '__weakref__',\n",
+       " '_all_strings',\n",
+       " '_attr_value_as_string',\n",
+       " '_attribute_checker',\n",
+       " '_find_all',\n",
+       " '_find_one',\n",
+       " '_formatter_for_name',\n",
+       " '_is_xml',\n",
+       " '_lastRecursiveChild',\n",
+       " '_last_descendant',\n",
+       " '_select_debug',\n",
+       " '_selector_combinators',\n",
+       " '_should_pretty_print',\n",
+       " '_tag_name_matches_and',\n",
+       " 'append',\n",
+       " 'attribselect_re',\n",
+       " 'attrs',\n",
+       " 'can_be_empty_element',\n",
+       " 'childGenerator',\n",
+       " 'children',\n",
+       " 'clear',\n",
+       " 'contents',\n",
+       " 'decode',\n",
+       " 'decode_contents',\n",
+       " 'decompose',\n",
+       " 'descendants',\n",
+       " 'encode',\n",
+       " 'encode_contents',\n",
+       " 'extract',\n",
+       " 'fetchNextSiblings',\n",
+       " 'fetchParents',\n",
+       " 'fetchPrevious',\n",
+       " 'fetchPreviousSiblings',\n",
+       " 'find',\n",
+       " 'findAll',\n",
+       " 'findAllNext',\n",
+       " 'findAllPrevious',\n",
+       " 'findChild',\n",
+       " 'findChildren',\n",
+       " 'findNext',\n",
+       " 'findNextSibling',\n",
+       " 'findNextSiblings',\n",
+       " 'findParent',\n",
+       " 'findParents',\n",
+       " 'findPrevious',\n",
+       " 'findPreviousSibling',\n",
+       " 'findPreviousSiblings',\n",
+       " 'find_all',\n",
+       " 'find_all_next',\n",
+       " 'find_all_previous',\n",
+       " 'find_next',\n",
+       " 'find_next_sibling',\n",
+       " 'find_next_siblings',\n",
+       " 'find_parent',\n",
+       " 'find_parents',\n",
+       " 'find_previous',\n",
+       " 'find_previous_sibling',\n",
+       " 'find_previous_siblings',\n",
+       " 'format_string',\n",
+       " 'get',\n",
+       " 'getText',\n",
+       " 'get_text',\n",
+       " 'has_attr',\n",
+       " 'has_key',\n",
+       " 'hidden',\n",
+       " 'index',\n",
+       " 'insert',\n",
+       " 'insert_after',\n",
+       " 'insert_before',\n",
+       " 'isSelfClosing',\n",
+       " 'is_empty_element',\n",
+       " 'name',\n",
+       " 'namespace',\n",
+       " 'next',\n",
+       " 'nextGenerator',\n",
+       " 'nextSibling',\n",
+       " 'nextSiblingGenerator',\n",
+       " 'next_element',\n",
+       " 'next_elements',\n",
+       " 'next_sibling',\n",
+       " 'next_siblings',\n",
+       " 'parent',\n",
+       " 'parentGenerator',\n",
+       " 'parents',\n",
+       " 'parserClass',\n",
+       " 'parser_class',\n",
+       " 'prefix',\n",
+       " 'prettify',\n",
+       " 'previous',\n",
+       " 'previousGenerator',\n",
+       " 'previousSibling',\n",
+       " 'previousSiblingGenerator',\n",
+       " 'previous_element',\n",
+       " 'previous_elements',\n",
+       " 'previous_sibling',\n",
+       " 'previous_siblings',\n",
+       " 'recursiveChildGenerator',\n",
+       " 'renderContents',\n",
+       " 'replaceWith',\n",
+       " 'replaceWithChildren',\n",
+       " 'replace_with',\n",
+       " 'replace_with_children',\n",
+       " 'select',\n",
+       " 'select_one',\n",
+       " 'setup',\n",
+       " 'string',\n",
+       " 'strings',\n",
+       " 'stripped_strings',\n",
+       " 'tag_name_re',\n",
+       " 'text',\n",
+       " 'unwrap',\n",
+       " 'wrap']"
+      ]
+     },
+     "execution_count": 278,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dir(moviesoupdiv[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 280,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<bound method Tag.has_attr of <div class=\"ribbonize\" data-caller=\"filmosearch\" data-tconst=\"tt5825058\"></div>>"
+      ]
+     },
+     "execution_count": 280,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "moviesoupdiv[0].has_attr"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 281,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "u'tt5825058'"
+      ]
+     },
+     "execution_count": 281,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "moviesoupdiv[0]['data-tconst']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 282,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "goodmovietconst = []\n",
+    "\n",
+    "for div_elm in moviesoupdiv:\n",
+    "    goodmovietconst.append(div_elm['data-tconst'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 376,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "badmovies2016url = 'http://www.imdb.com/search/title?year=2016,2016&sort=user_rating,asc'\n",
+    "badmovies2016html = requests.get(badmovies2016url)\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 377,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "badmoviesoup = BeautifulSoup(badmovies2016html.text, 'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 378,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "badmoviesoupdiv = badmoviesoup.findAll('div', {'class': 'ribbonize'})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 379,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "badmoviesouptconst = []\n",
+    "\n",
+    "for div_elm in badmoviesoupdiv:\n",
+    "    badmoviesouptconst.append(div_elm['data-tconst'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 380,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "all2016tconst = goodmovietconst + badmoviesouptconst"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 381,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "50"
+      ]
+     },
+     "execution_count": 381,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(all2016tconst)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 382,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "reviews2016astext = []\n",
+    "reviews2016asint = []"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 383,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from requests.exceptions import ConnectionError\n",
+    "\n",
+    "for tconst in all2016tconst:\n",
+    "    try:\n",
+    "        reviews = imdb.get_title_reviews(tconst,max_results=2)\n",
+    "        if reviews is None:\n",
+    "            continue\n",
+    "        for movie in reviews:\n",
+    "            reviews2016astext.append(movie.text)\n",
+    "            reviews2016asint.append(movie.rating)\n",
+    "    except ConnectionError:\n",
+    "        print 'could not get movie: ', tconst"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 384,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "27\n",
+      "27\n"
+     ]
+    }
+   ],
+   "source": [
+    "print len(reviews2016astext)\n",
+    "print len(reviews2016asint)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 385,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "stars = pd.DataFrame({\"text\": reviews2016astext, \"int\": reviews2016asint})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 386,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "stars = stars.dropna()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 387,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "make_features = TfidfVectorizer()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 388,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "TfidfVectorizer(analyzer=u'word', binary=False, decode_error=u'strict',\n",
+       "        dtype=<type 'numpy.int64'>, encoding=u'utf-8', input=u'content',\n",
+       "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "        ngram_range=(1, 1), norm=u'l2', preprocessor=None, smooth_idf=True,\n",
+       "        stop_words=None, strip_accents=None, sublinear_tf=False,\n",
+       "        token_pattern=u'(?u)\\\\b\\\\w\\\\w+\\\\b', tokenizer=None, use_idf=True,\n",
+       "        vocabulary=None)"
+      ]
+     },
+     "execution_count": 388,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#make_features.fit(stars['text'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 389,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "#df_movies['review_features'] = make_features.transform(df_movies['review'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 390,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "# you have a clf"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 403,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "Xtest = make_features.transform(stars['text'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 404,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(24, 1770)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print Xtest.shape\n",
+    "# (19, 1770)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 406,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0])"
+      ]
+     },
+     "execution_count": 406,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "y"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 484,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "make_features = TfidfVectorizer(stop_words='english')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 485,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "lower not found",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-485-392e73f573ae>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mmake_features\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mxtext\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mfit\u001b[0;34m(self, raw_documents, y)\u001b[0m\n\u001b[1;32m   1283\u001b[0m         \u001b[0mself\u001b[0m \u001b[0;34m:\u001b[0m \u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1284\u001b[0m         \"\"\"\n\u001b[0;32m-> 1285\u001b[0;31m         \u001b[0mX\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit_transform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mraw_documents\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1286\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_tfidf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1287\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mfit_transform\u001b[0;34m(self, raw_documents, y)\u001b[0m\n\u001b[1;32m    815\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    816\u001b[0m         vocabulary, X = self._count_vocab(raw_documents,\n\u001b[0;32m--> 817\u001b[0;31m                                           self.fixed_vocabulary_)\n\u001b[0m\u001b[1;32m    818\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    819\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbinary\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m_count_vocab\u001b[0;34m(self, raw_documents, fixed_vocab)\u001b[0m\n\u001b[1;32m    750\u001b[0m         \u001b[0mindptr\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    751\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0mdoc\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mraw_documents\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 752\u001b[0;31m             \u001b[0;32mfor\u001b[0m \u001b[0mfeature\u001b[0m \u001b[0;32min\u001b[0m \u001b[0manalyze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdoc\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    753\u001b[0m                 \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    754\u001b[0m                     \u001b[0mj_indices\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvocabulary\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mfeature\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m<lambda>\u001b[0;34m(doc)\u001b[0m\n\u001b[1;32m    236\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    237\u001b[0m             return lambda doc: self._word_ngrams(\n\u001b[0;32m--> 238\u001b[0;31m                 tokenize(preprocess(self.decode(doc))), stop_words)\n\u001b[0m\u001b[1;32m    239\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    240\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m<lambda>\u001b[0;34m(x)\u001b[0m\n\u001b[1;32m    202\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    203\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlowercase\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 204\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0;32mlambda\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mstrip_accents\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlower\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    205\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    206\u001b[0m             \u001b[0;32mreturn\u001b[0m \u001b[0mstrip_accents\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/scipy/sparse/base.pyc\u001b[0m in \u001b[0;36m__getattr__\u001b[0;34m(self, attr)\u001b[0m\n\u001b[1;32m    523\u001b[0m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgetnnz\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    524\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 525\u001b[0;31m             \u001b[0;32mraise\u001b[0m \u001b[0mAttributeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mattr\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m\" not found\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    526\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    527\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mtranspose\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mAttributeError\u001b[0m: lower not found"
+     ]
+    }
+   ],
+   "source": [
+    "make_features.fit(xtext)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 486,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "NotFittedError",
+     "evalue": "TfidfVectorizer - Vocabulary wasn't fitted.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNotFittedError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-486-8dee8840800a>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mxtext\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmake_features\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mxtext\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mtransform\u001b[0;34m(self, raw_documents, copy)\u001b[0m\n\u001b[1;32m   1331\u001b[0m         \u001b[0mcheck_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'_tfidf'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'The tfidf vector is not fitted'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1332\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1333\u001b[0;31m         \u001b[0mX\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mraw_documents\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1334\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_tfidf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcopy\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mFalse\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mtransform\u001b[0;34m(self, raw_documents)\u001b[0m\n\u001b[1;32m    861\u001b[0m             \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_validate_vocabulary\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    862\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 863\u001b[0;31m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_check_vocabulary\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    864\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    865\u001b[0m         \u001b[0;31m# use the same matrix-building strategy as fit_transform\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m_check_vocabulary\u001b[0;34m(self)\u001b[0m\n\u001b[1;32m    273\u001b[0m         \u001b[0;34m\"\"\"Check if vocabulary is empty or missing (not fit-ed)\"\"\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    274\u001b[0m         \u001b[0mmsg\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m\"%(name)s - Vocabulary wasn't fitted.\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 275\u001b[0;31m         \u001b[0mcheck_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'vocabulary_'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmsg\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mmsg\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    276\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    277\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mvocabulary_\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;36m0\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/utils/validation.pyc\u001b[0m in \u001b[0;36mcheck_is_fitted\u001b[0;34m(estimator, attributes, msg, all_or_any)\u001b[0m\n\u001b[1;32m    676\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    677\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0mall_or_any\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mhasattr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mattr\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mattr\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mattributes\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 678\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mNotFittedError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmsg\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m{\u001b[0m\u001b[0;34m'name'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mtype\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__name__\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    679\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    680\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNotFittedError\u001b[0m: TfidfVectorizer - Vocabulary wasn't fitted."
+     ]
+    }
+   ],
+   "source": [
+    "xtext = make_features.transform(xtext)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 487,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.cross_validation import train_test_split"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 488,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn import preprocessing\n",
+    "X_train, X_test, y_train, y_test = train_test_split(\n",
+    "     xtext, y, test_size=0.4, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 501,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,\n",
+       "          intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,\n",
+       "          penalty='l2', random_state=None, solver='liblinear', tol=0.0001,\n",
+       "          verbose=0, warm_start=False)"
+      ]
+     },
+     "execution_count": 501,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "clf.fit(X_train, y_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 503,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "predictionz = clf.predict(X_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 495,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "predictions = clf.predict(Xtest)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 410,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "this = df[5:]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 498,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "that = xtext[10:]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 499,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "NotFittedError",
+     "evalue": "TfidfVectorizer - Vocabulary wasn't fitted.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNotFittedError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-499-32704ad49c13>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mvar\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmake_features\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mthat\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mtransform\u001b[0;34m(self, raw_documents, copy)\u001b[0m\n\u001b[1;32m   1331\u001b[0m         \u001b[0mcheck_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'_tfidf'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'The tfidf vector is not fitted'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1332\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1333\u001b[0;31m         \u001b[0mX\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mTfidfVectorizer\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mraw_documents\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1334\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_tfidf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcopy\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mFalse\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36mtransform\u001b[0;34m(self, raw_documents)\u001b[0m\n\u001b[1;32m    861\u001b[0m             \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_validate_vocabulary\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    862\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 863\u001b[0;31m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_check_vocabulary\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    864\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    865\u001b[0m         \u001b[0;31m# use the same matrix-building strategy as fit_transform\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/feature_extraction/text.pyc\u001b[0m in \u001b[0;36m_check_vocabulary\u001b[0;34m(self)\u001b[0m\n\u001b[1;32m    273\u001b[0m         \u001b[0;34m\"\"\"Check if vocabulary is empty or missing (not fit-ed)\"\"\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    274\u001b[0m         \u001b[0mmsg\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m\"%(name)s - Vocabulary wasn't fitted.\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 275\u001b[0;31m         \u001b[0mcheck_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'vocabulary_'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmsg\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mmsg\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    276\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    277\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mvocabulary_\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;36m0\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m//anaconda/lib/python2.7/site-packages/sklearn/utils/validation.pyc\u001b[0m in \u001b[0;36mcheck_is_fitted\u001b[0;34m(estimator, attributes, msg, all_or_any)\u001b[0m\n\u001b[1;32m    676\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    677\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0mall_or_any\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mhasattr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mattr\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mattr\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mattributes\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 678\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mNotFittedError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmsg\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m{\u001b[0m\u001b[0;34m'name'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mtype\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__name__\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    679\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    680\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNotFittedError\u001b[0m: TfidfVectorizer - Vocabulary wasn't fitted."
+     ]
+    }
+   ],
+   "source": [
+    "var = make_features.transform(that)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 500,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([0, 1, 0, 1, 1, 1, 1, 0, 0, 1])"
+      ]
+     },
+     "execution_count": 500,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#seeing predictions on only bad movies. more 0s. that's good. \n",
+    "\n",
+    "clf.predict(var)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 423,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.feature_extraction.text import CountVectorizer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "cvec = CountVectorizer()\n",
+    "cvec.fit()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 421,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0.64475767,  0.64475767,  0.64475767,  0.64475767,  0.64475767,\n",
+       "        0.64475767,  0.64475767,  0.64475767,  0.64475767,  0.64475767,\n",
+       "        0.64475767,  0.64475767,  0.64475767,  0.64475767,  0.64475767,\n",
+       "        0.64475767,  0.64475767,  0.64475767,  0.64475767,  0.64475767,\n",
+       "        0.64475767,  0.64475767,  0.64475767,  0.64475767])"
+      ]
+     },
+     "execution_count": 421,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Lass_Clf.predict(Xtest)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 504,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[0, 3],\n",
+       "       [0, 5]])"
+      ]
+     },
+     "execution_count": 504,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from sklearn.metrics import confusion_matrix\n",
+    "\n",
+    "confusion_matrix(y_test, predictionz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 506,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.625"
+      ]
+     },
+     "execution_count": 506,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "clf.score(X_test, y_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 523,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Decision Tree Score:\t0.738 ± 0.07\n",
+      "Bagging DT Score:\t0.683 ± 0.138\n",
+      "Random Forest Score:\t0.683 ± 0.138\n",
+      "Extra Trees Score:\t0.635 ± 0.045\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.cross_validation import cross_val_score, StratifiedKFold\n",
+    "from sklearn.tree import DecisionTreeClassifier\n",
+    "from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, BaggingClassifier\n",
+    "\n",
+    "cv = StratifiedKFold(y, n_folds=3, shuffle=True, random_state=41)\n",
+    "\n",
+    "dt = DecisionTreeClassifier(class_weight='balanced')\n",
+    "s = cross_val_score(dt, X, y, cv=cv, n_jobs=-1)\n",
+    "print \"{} Score:\\t{:0.3} ± {:0.3}\".format(\"Decision Tree\", s.mean().round(3), s.std().round(3))\n",
+    "\n",
+    "bdt = BaggingClassifier(DecisionTreeClassifier())\n",
+    "rf = RandomForestClassifier(class_weight='balanced', n_jobs=-1)\n",
+    "et = ExtraTreesClassifier(class_weight='balanced', n_jobs=-1)\n",
+    "\n",
+    "def score(model, name):\n",
+    "    s = cross_val_score(model, X, y, cv=cv, n_jobs=-1)\n",
+    "    print \"{} Score:\\t{:0.3} ± {:0.3}\".format(name, s.mean().round(3), s.std().round(3))\n",
+    "\n",
+    "score(bdt, \"Bagging DT\")\n",
+    "score(rf, \"Random Forest\")\n",
+    "score(et, \"Extra Trees\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python [Root]",
+   "language": "python",
+   "name": "Python [Root]"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
